@@ -2,11 +2,11 @@
  * Form component for adding/editing expenses
  */
 
-import React from "react";
+import React, { useState } from "react";
 import { ExpenseFormData } from "../types";
-import { EXPENSE_CATEGORIES } from "../constants/categories";
-import { TextField, SelectBox, Button } from "../vibes";
+import { TextField, SelectBox, Button, Modal } from "../vibes";
 import { useExpenseForm } from "../hooks/useExpenseForm";
+import { useCategories } from "../hooks/useCategories";
 
 interface ExpenseFormProps {
   initialData?: Partial<ExpenseFormData>;
@@ -27,6 +27,12 @@ export function ExpenseForm({
       onSubmit,
     });
 
+  const { categories, addCategory } = useCategories();
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [categoryError, setCategoryError] = useState("");
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+
   const formStyle: React.CSSProperties = {
     display: "flex",
     flexDirection: "column",
@@ -39,10 +45,37 @@ export function ExpenseForm({
     marginTop: "0.5rem",
   };
 
-  const categoryOptions = EXPENSE_CATEGORIES.map((category) => ({
-    value: category,
-    label: category,
+  const categoryRowStyle: React.CSSProperties = {
+    display: "flex",
+    gap: "0.5rem",
+    alignItems: "flex-end",
+  };
+
+  const categoryOptions = categories.map((category) => ({
+    value: category.name,
+    label: category.name,
   }));
+
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) {
+      setCategoryError("Category name is required");
+      return;
+    }
+
+    setIsAddingCategory(true);
+    setCategoryError("");
+    try {
+      await addCategory(newCategoryName.trim());
+      setNewCategoryName("");
+      setShowCategoryModal(false);
+    } catch (error) {
+      setCategoryError(
+        error instanceof Error ? error.message : "Failed to add category",
+      );
+    } finally {
+      setIsAddingCategory(false);
+    }
+  };
 
   return (
     <form onSubmit={handleSubmit} style={formStyle}>
@@ -69,15 +102,26 @@ export function ExpenseForm({
         required
       />
 
-      <SelectBox
-        label="Category"
-        options={categoryOptions}
-        value={formData.category}
-        onChange={(e) => handleChange("category", e.target.value)}
-        error={errors.category}
-        fullWidth
-        required
-      />
+      <div style={categoryRowStyle}>
+        <div style={{ flex: 1 }}>
+          <SelectBox
+            label="Category"
+            options={categoryOptions}
+            value={formData.category}
+            onChange={(e) => handleChange("category", e.target.value)}
+            error={errors.category}
+            fullWidth
+            required
+          />
+        </div>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => setShowCategoryModal(true)}
+        >
+          + Add Category
+        </Button>
+      </div>
 
       <TextField
         label="Date"
@@ -109,6 +153,52 @@ export function ExpenseForm({
           </Button>
         )}
       </div>
+
+      <Modal
+        isOpen={showCategoryModal}
+        onClose={() => {
+          setShowCategoryModal(false);
+          setNewCategoryName("");
+          setCategoryError("");
+        }}
+        title="Add Category"
+      >
+        <div style={formStyle}>
+          <TextField
+            label="Category Name"
+            type="text"
+            placeholder="e.g. Subscriptions"
+            value={newCategoryName}
+            onChange={(e) => setNewCategoryName(e.target.value)}
+            error={categoryError}
+            fullWidth
+            required
+          />
+          <div style={buttonGroupStyle}>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={handleAddCategory}
+              disabled={isAddingCategory}
+              fullWidth
+            >
+              {isAddingCategory ? "Adding..." : "Add Category"}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setShowCategoryModal(false);
+                setNewCategoryName("");
+                setCategoryError("");
+              }}
+              disabled={isAddingCategory}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </form>
   );
 }
