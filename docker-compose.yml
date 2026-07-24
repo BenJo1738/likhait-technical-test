@@ -1,8 +1,6 @@
-version: "3.8"
-
 services:
   db:
-    image: mysql:8.0
+    image: mariadb:latest
     container_name: expense_system_db
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
@@ -12,23 +10,13 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - mysql_fresh:/var/lib/mysql
     healthcheck:
-      test:
-        [
-          "CMD",
-          "mysqladmin",
-          "ping",
-          "-h",
-          "localhost",
-          "-u",
-          "root",
-          "-prootpassword",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: ["CMD", "mariadb-admin", "ping", "-h", "127.0.0.1", "-uroot", "-prootpassword"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+      start_period: 90s
     networks:
       - expense_network
 
@@ -52,12 +40,13 @@ services:
     volumes:
       - ./backend:/rails
       - backend_gems:/usr/local/bundle
+
     command: >
       sh -c "
-        bundle install &&
-        rails db:migrate &&
-        rails db:seed &&
-        rails server -b 0.0.0.0
+      bundle install &&
+      bundle exec rails db:migrate &&
+      bundle exec rails db:seed &&
+      bundle exec rails server -b 0.0.0.0
       "
     networks:
       - expense_network
@@ -81,7 +70,7 @@ services:
       - expense_network
 
 volumes:
-  mysql_data:
+  mysql_fresh:
   backend_gems:
   frontend_node_modules:
 
