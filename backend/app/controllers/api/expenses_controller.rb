@@ -1,19 +1,19 @@
 class Api::ExpensesController < ApplicationController
-  def index
-    expenses = Expense.includes(:category).order(created_at: :desc)
+def index
+  expenses = Expense.includes(:category).order(date: :desc)
 
-    if params[:year].present? && params[:month].present?
-      year = params[:year].to_i
-      month = params[:month].to_i
+  if params[:year].present? && params[:month].present?
+    year = params[:year].to_i
+    month = params[:month].to_i
 
-      start_date = Date.new(year, month, 1)
-      end_date = start_date.end_of_month
+    start_date = Date.new(year, month, 1)
+    end_date = start_date.end_of_month
 
-      expenses = expenses.where(created_at: start_date.beginning_of_day..end_date.end_of_day)
-    end
-
-    render json: expenses.map { |expense| format_expense(expense) }
+    expenses = expenses.where(date: start_date..end_date)
   end
+
+  render json: expenses.map { |expense| format_expense(expense) }
+end
 
   def create
     expense = Expense.new(expense_params)
